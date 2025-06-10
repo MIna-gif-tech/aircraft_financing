@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ航空機投資キャリアガイド</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Blue/Green Accents -->
+    <!-- Application Structure Plan: A top-down narrative flow designed for a graduate student user. It starts with a high-level "What & Why" dashboard to grab attention, moves to "Who" are the key market players with interactive comparisons, then dives into the core user need: "How" to get a job, with an interactive career navigator. It concludes with "What else" to consider (risks). This structure guides the user from general interest to specific, actionable career information, making a complex report digestible and personally relevant. -->
+    <!-- Visualization & Content Choices: 
+        1. Market Recovery (Report Info) -> Goal: Inform -> Viz: Line Chart (Chart.js) -> Interaction: Hover for details -> Justification: Shows trend over time effectively.
+        2. JOL Scheme (Report Info) -> Goal: Organize -> Viz: HTML/CSS Flowchart -> Interaction: Static visual -> Justification: Simplifies a complex legal/financial process into easy-to-follow steps.
+        3. Company Fleet Size (Report Info) -> Goal: Compare -> Viz: Horizontal Bar Chart (Chart.js) -> Interaction: Click bar to see company details -> Justification: Best for ranking and direct comparison. Interaction provides deeper info without clutter.
+        4. Career Path Skills (Report Info) -> Goal: Compare/Inform -> Viz: Radar Chart (Chart.js) -> Interaction: Select role to update chart -> Justification: Excellent for comparing multi-dimensional skill profiles for different roles.
+        5. Risks & Hedges (Report Info) -> Goal: Organize -> Viz: HTML/JS Accordion -> Interaction: Click to expand -> Justification: Breaks down dense text into manageable, user-triggered chunks.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #F8F7F4; color: #333; }
+        .bg-warm-neutral { background-color: #F8F7F4; }
+        .bg-card { background-color: #FFFFFF; }
+        .text-primary { color: #0D3D56; }
+        .text-secondary { color: #5A7D8E; }
+        .accent-bg { background-color: #007A7A; }
+        .accent-text { color: #007A7A; }
+        .accent-border { border-color: #007A7A; }
+        .nav-button { transition: all 0.3s ease; }
+        .nav-button.active { color: #FFFFFF; background-color: #0D3D56; }
+        .nav-button:not(.active):hover { background-color: #EAE8E3; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin-left: auto; margin-right: auto; height: 350px; max-height: 50vh; }
+        @media (max-width: 768px) { .chart-container { height: 300px; } }
+        .role-skill-chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 350px; }
+        .company-card { transition: transform 0.3s, box-shadow 0.3s; }
+        .company-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); max-width: 600px; width: 90%; position: relative; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+        .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007A7A; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-warm-neutral">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-5xl font-bold text-primary mb-2">航空機投資の世界へようこそ</h1>
+            <p class="text-md md:text-lg text-secondary">大学院生のためのインタラクティブ・キャリアガイド</p>
+        </header>
+
+        <nav class="flex justify-center mb-12 bg-white rounded-full shadow-md p-2 sticky top-4 z-10">
+            <button data-target="overview" class="nav-button active font-semibold py-2 px-6 rounded-full">概観</button>
+            <button data-target="players" class="nav-button font-semibold py-2 px-6 rounded-full">主要企業</button>
+            <button data-target="careers" class="nav-button font-semibold py-2 px-6 rounded-full">キャリアパス</button>
+            <button data-target="risks" class="nav-button font-semibold py-2 px-6 rounded-full">リスク</button>
+        </nav>
+
+        <main>
+            <section id="overview" class="content-section active">
+                <div class="text-center mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">なぜ今、航空機投資なのか？</h2>
+                    <p class="text-secondary max-w-3xl mx-auto">パンデミック後の力強い回復と、独自の税制上のメリットにより、航空機は安定した成長が見込める魅力的な投資対象となっています。ここではその基本構造と市場の可能性を探ります。</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 items-center mb-12">
+                    <div class="bg-card p-6 rounded-xl shadow-lg">
+                         <h3 class="text-xl font-bold text-primary mb-4 text-center">旅客需要のV字回復</h3>
+                         <div class="chart-container h-64 md:h-80">
+                            <canvas id="demandChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-xl font-bold text-primary mb-4">投資の魅力</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="accent-bg text-white rounded-full h-8 w-8 flex-shrink-0 flex items-center justify-center mr-4 mt-1">📈</div>
+                                <div>
+                                    <h4 class="font-bold text-primary">持続的な成長性</h4>
+                                    <p class="text-secondary text-sm">世界の旅客需要は年率3-4%での成長が見込まれ、航空機への需要は今後も堅調に推移する見通しです。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="accent-bg text-white rounded-full h-8 w-8 flex-shrink-0 flex items-center justify-center mr-4 mt-1">💰</div>
+                                <div>
+                                    <h4 class="font-bold text-primary">税制上のメリット</h4>
+                                    <p class="text-secondary text-sm">日本型オペレーティングリース（JOL）は、匿名組合の損失を認識することで利益を繰り延べ、節税効果が期待できる金融商品です。</p>
+                                </div>
+                            </div>
+                             <div class="flex items-start">
+                                <div class="accent-bg text-white rounded-full h-8 w-8 flex-shrink-0 flex items-center justify-center mr-4 mt-1">✈️</div>
+                                <div>
+                                    <h4 class="font-bold text-primary">供給制約による価値維持</h4>
+                                    <p class="text-secondary text-sm">サプライチェーンの課題などによる供給不足が、既存航空機の価値とリース料を安定させる要因となっています。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl md:text-2xl font-bold text-primary mb-6 text-center">日本型オペレーティングリース（JOL）の仕組み</h3>
+                    <div class="relative grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                        <div class="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 hidden md:block"></div>
+                         <div class="absolute top-1/2 left-0 w-full flex justify-around hidden md:flex">
+                            <div class="w-1/4 flex justify-center"><span class="text-2xl text-secondary -mt-10">→</span></div>
+                            <div class="w-1/4 flex justify-center"><span class="text-2xl text-secondary -mt-10">→</span></div>
+                            <div class="w-1/4 flex justify-center"><span class="text-2xl text-secondary -mt-10">→</span></div>
+                        </div>
+                        <div class="md:hidden absolute left-1/2 h-full w-0.5 bg-gray-300 top-0"></div>
+                        
+                        <div class="z-10 p-4 bg-card rounded-lg shadow-md">
+                            <div class="accent-bg text-white rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-2 text-xl font-bold">1</div>
+                            <h4 class="font-bold text-primary">資金調達</h4>
+                            <p class="text-sm text-secondary">リース会社が匿名組合を組成し、法人投資家から資金を集めます。</p>
+                        </div>
+                        <div class="z-10 p-4 bg-card rounded-lg shadow-md">
+                             <div class="accent-bg text-white rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-2 text-xl font-bold">2</div>
+                            <h4 class="font-bold text-primary">航空機購入</h4>
+                            <p class="text-sm text-secondary">集めた資金でメーカーから航空機を購入します。</p>
+                        </div>
+                        <div class="z-10 p-4 bg-card rounded-lg shadow-md">
+                             <div class="accent-bg text-white rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-2 text-xl font-bold">3</div>
+                            <h4 class="font-bold text-primary">リース契約</h4>
+                            <p class="text-sm text-secondary">航空会社に機体を貸し出し、リース料を得ます。</p>
+                        </div>
+                        <div class="z-10 p-4 bg-card rounded-lg shadow-md">
+                           <div class="accent-bg text-white rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-2 text-xl font-bold">4</div>
+                            <h4 class="font-bold text-primary">利益分配</h4>
+                            <p class="text-sm text-secondary">リース満了後、機体を売却し、売却益とリース料を投資家に分配します。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="players" class="content-section">
+                 <div class="text-center mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">世界の空を動かす日本のプレイヤー</h2>
+                    <p class="text-secondary max-w-3xl mx-auto">日系企業はM&Aなどを通じて、世界の航空機リース市場で大きな存在感を示しています。ここでは、主要な企業の規模と特徴をインタラクティブに見ていきましょう。</p>
+                </div>
+                <div class="grid lg:grid-cols-5 gap-8">
+                    <div class="lg:col-span-3 bg-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-xl font-bold text-primary mb-4 text-center">日系主要企業の保有機材数（世界ランク）</h3>
+                         <div class="chart-container">
+                            <canvas id="companyChart"></canvas>
+                        </div>
+                    </div>
+                    <div id="companyDetail" class="lg:col-span-2 bg-card p-6 rounded-xl shadow-lg flex flex-col justify-center">
+                        <h3 class="text-xl font-bold text-primary mb-4 text-center">企業詳細</h3>
+                        <p class="text-secondary text-center">チャートの項目をクリックして詳細を表示</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="careers" class="content-section">
+                <div class="text-center mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">航空機投資分野でのキャリアを掴む</h2>
+                    <p class="text-secondary max-w-3xl mx-auto">大学院での学びを活かせる多様な職種が存在します。ここでは、代表的な職種と求められるスキル、そして主要企業の採用情報をナビゲートします。</p>
+                </div>
+                <div class="bg-card p-6 rounded-xl shadow-lg mb-12">
+                    <h3 class="text-xl md:text-2xl font-bold text-primary mb-6 text-center">職種と求められるスキル</h3>
+                     <div class="grid md:grid-cols-3 gap-8">
+                        <div class="md:col-span-1">
+                            <p class="text-primary font-semibold mb-2">探したい職種を選択してください：</p>
+                            <div id="roleSelector" class="flex flex-col space-y-2">
+                                <!-- Role buttons will be injected here -->
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <div class="role-skill-chart-container">
+                                <canvas id="skillRadarChart"></canvas>
+                            </div>
+                            <div id="roleDescription" class="mt-4 text-secondary text-sm p-4 bg-warm-neutral rounded-lg">
+                                 職種を選択すると、ここに業務内容の説明が表示されます。
+                                <button id="generateQuestionsButton" class="mt-4 w-full bg-accent-bg text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                    <span class="text-lg">✨</span> 面接対策の質問を生成
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                 <div class="bg-card p-6 rounded-xl shadow-lg">
+                     <h3 class="text-xl md:text-2xl font-bold text-primary mb-6 text-center">大学院生向け新卒採用情報</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="companyGrid">
+                        <!-- Company cards will be injected here -->
+                     </div>
+                </div>
+            </section>
+            
+            <section id="risks" class="content-section">
+                <div class="text-center mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold text-primary mb-2">投資に伴うリスクと対策</h2>
+                    <p class="text-secondary max-w-3xl mx-auto">高いリターンが期待できる一方、特有のリスクも存在します。ここでは主要なリスクと、それらを管理するための戦略を解説します。</p>
+                </div>
+                <div id="riskAccordion" class="space-y-4 max-w-4xl mx-auto">
+                     <!-- Risk items will be injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Interview Questions Modal -->
+    <div id="interviewQuestionsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 class="text-xl font-bold text-primary mb-4 text-center">面接対策の質問</h3>
+            <div id="interviewQuestionsContent">
+                <div class="loading-spinner"></div>
+                <p class="text-center text-secondary mt-4">質問を生成中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navButtons = document.querySelectorAll('.nav-button');
+            const sections = document.querySelectorAll('.content-section');
+            const generateQuestionsButton = document.getElementById('generateQuestionsButton');
+            const interviewQuestionsModal = document.getElementById('interviewQuestionsModal');
+            const interviewQuestionsContent = document.getElementById('interviewQuestionsContent');
+            const closeButton = document.querySelector('.close-button');
+
+            let currentRole = null; // To store the currently selected role for the LLM call
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.dataset.target;
+
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    sections.forEach(section => {
+                        if (section.id === targetId) {
+                            section.classList.add('active');
+                        } else {
+                            section.classList.remove('active');
+                        }
+                    });
+                });
+            });
+            
+            Chart.defaults.font.family = "'Noto Sans JP', sans-serif";
+
+            const demandData = {
+                labels: ['コロナ禍前', '2023年8月', '2023年12月', '将来予測'],
+                datasets: [{
+                    label: '旅客需要 (コロナ禍前=100)',
+                    data: [100, 109.2, 97.5, 115],
+                    borderColor: '#007A7A',
+                    backgroundColor: 'rgba(0, 122, 122, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            };
+
+            const demandChartCtx = document.getElementById('demandChart').getContext('2d');
+            new Chart(demandChartCtx, {
+                type: 'line',
+                data: demandData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: '指数 (コロナ禍前=100)' }
+                        }
+                    }
+                }
+            });
+
+            const companyData = {
+                labels: ['SMFL (SMBC Aviation Capital)', '東京センチュリー (ACG)', 'オリックス (ORIX Aviation)', '三菱HCキャピタル (JSA)'],
+                datasets: [{
+                    label: '保有機材数（約）',
+                    data: [700, 400, 200, 180],
+                    backgroundColor: ['#0D3D56', '#2E5F7E', '#5A7D8E', '#8FAAB8'],
+                    borderColor: '#FFFFFF',
+                    borderWidth: 1
+                }]
+            };
+
+            const companyDetails = {
+                'SMFL (SMBC Aviation Capital)': {
+                    rank: 6,
+                    strength: '日系最大規模。大手金融グループの安定性とグローバルなネットワークが強み。',
+                    note: '2012年にRBSの航空機リース事業を買収して設立。'
+                },
+                '東京センチュリー (ACG)': {
+                    rank: 11,
+                    strength: '2019年の大型買収により急成長。多角的な金融ソリューションを提供。',
+                    note: 'Aviation Capital Groupを約3,200億円で買収。'
+                },
+                'オリックス (ORIX Aviation)': {
+                    rank: 17,
+                    strength: '多角化経営が強み。世界3位のAvolonにも出資し、業界での存在感が大きい。',
+                    note: '1991年から航空機リース事業に参入。'
+                },
+                '三菱HCキャピタル (JSA)': {
+                    rank: 21,
+                    strength: 'グローバルなネットワークを活かし、顧客ニーズに合わせたソリューションを提供。',
+                    note: '2012年にJackson Square Aviationを買収。'
+                }
+            };
+            
+            const companyDetailEl = document.getElementById('companyDetail');
+            const companyChartCtx = document.getElementById('companyChart').getContext('2d');
+            const companyChart = new Chart(companyChartCtx, {
+                type: 'bar',
+                data: companyData,
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '保有機材数（機）' }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const companyName = companyData.labels[index];
+                            const details = companyDetails[companyName];
+                            
+                            companyDetailEl.innerHTML = `
+                                <h3 class="text-xl font-bold text-primary mb-2 text-center">${companyName}</h3>
+                                <p class="text-center text-secondary mb-4">世界ランキング: <strong>${details.rank}位</strong></p>
+                                <div class="space-y-3 text-sm">
+                                    <div>
+                                        <h4 class="font-semibold text-primary">主な強み:</h4>
+                                        <p class="text-secondary">${details.strength}</p>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-primary">特記事項:</h4>
+                                        <p class="text-secondary">${details.note}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            });
+            
+            const rolesData = {
+                'アセットマネジメント': {
+                    description: '航空機資産の価値を最大化する戦略を企画・実行。エコノミクス分析、ファンド組成、投資家開拓など、幅広い業務を担う司令塔。',
+                    skills: { '財務分析': 5, '法務知識': 4, '英語力': 5, '交渉力': 4, '事業戦略': 5, '技術理解': 2 }
+                },
+                '航空機ファイナンス': {
+                    description: '航空機の取得資金を提供する金融のプロ。シニアローンのアレンジやJOLのエクイティ引受支援など、グローバルな案件に携わる。',
+                    skills: { '財務分析': 5, '法務知識': 3, '英語力': 5, '交渉力': 5, '事業戦略': 3, '技術理解': 1 }
+                },
+                'ストラクチャードファイナンス': {
+                    description: 'JOLなどの金融商品を「作り出す」創造的な役割。世界中の航空会社や金融機関と連携し、数十億〜数百億円規模の取引を組成する。',
+                    skills: { '財務分析': 4, '法務知識': 4, '英語力': 4, '交渉力': 3, '事業戦略': 4, '技術理解': 2 }
+                },
+                '審査・法務': {
+                    description: 'リース契約の法的リスクを管理する守りの要。契約審査、法務相談、係争対応など、グローバルな契約の安全性を担保する。',
+                    skills: { '財務分析': 2, '法務知識': 5, '英語力': 4, '交渉力': 4, '事業戦略': 2, '技術理解': 1 }
+                },
+                '総合商社（航空部門）': {
+                    description: '航空機関連の事業投資やトレーディングなど、より広範なビジネス領域を担当。総合商社のネットワークを活かしたダイナミックな仕事。',
+                    skills: { '財務分析': 3, '法務知識': 3, '英語力': 5, '交渉力': 5, '事業戦略': 5, '技術理解': 3 }
+                }
+            };
+            
+            const roleSelector = document.getElementById('roleSelector');
+            const roleDescriptionEl = document.getElementById('roleDescription');
+            const skillRadarCtx = document.getElementById('skillRadarChart').getContext('2d');
+            let skillRadarChart;
+
+            function updateRoleInfo(roleName) {
+                const role = rolesData[roleName];
+                currentRole = roleName; // Set current role for LLM call
+                
+                roleDescriptionEl.innerHTML = `
+                    <p class="text-secondary text-sm">${role.description}</p>
+                    <button id="generateQuestionsButton" class="mt-4 w-full bg-accent-bg text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <span class="text-lg">✨</span> 面接対策の質問を生成
+                    </button>
+                `;
+
+                if (skillRadarChart) {
+                    skillRadarChart.data.datasets[0].data = Object.values(role.skills);
+                    skillRadarChart.data.datasets[0].label = roleName;
+                    skillRadarChart.update();
+                } else {
+                     skillRadarChart = new Chart(skillRadarCtx, {
+                        type: 'radar',
+                        data: {
+                            labels: Object.keys(role.skills),
+                            datasets: [{
+                                label: roleName,
+                                data: Object.values(role.skills),
+                                fill: true,
+                                backgroundColor: 'rgba(0, 122, 122, 0.2)',
+                                borderColor: 'rgb(0, 122, 122)',
+                                pointBackgroundColor: 'rgb(0, 122, 122)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgb(0, 122, 122)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                             scales: {
+                                r: {
+                                    angleLines: {
+                                        display: true
+                                    },
+                                    suggestedMin: 0,
+                                    suggestedMax: 5,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: '求められるスキルセット（5段階評価）'
+                                }
+                            }
+                        }
+                    });
+                }
+                document.getElementById('generateQuestionsButton').addEventListener('click', () => {
+                    showInterviewQuestionsModal(currentRole, rolesData[currentRole].description);
+                });
+            }
+            
+            Object.keys(rolesData).forEach((roleName, index) => {
+                const button = document.createElement('button');
+                button.textContent = roleName;
+                button.className = `w-full text-left p-3 rounded-lg transition-colors ${index === 0 ? 'accent-bg text-white' : 'hover:bg-gray-100'}`;
+                button.dataset.role = roleName;
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#roleSelector button').forEach(btn => {
+                        btn.classList.remove('accent-bg', 'text-white');
+                        btn.classList.add('hover:bg-gray-100');
+                    });
+                    button.classList.add('accent-bg', 'text-white');
+                    button.classList.remove('hover:bg-gray-100');
+                    updateRoleInfo(roleName);
+                });
+                roleSelector.appendChild(button);
+            });
+            
+            updateRoleInfo(Object.keys(rolesData)[0]);
+            
+            const companiesHiringData = [
+                { name: 'オリックス', salary: '320,000円', eligibility: '院卒後3年以内', type: 'リース', note: '総合職採用。輸送機器事業配属の可能性あり。'},
+                { name: '三菱HCキャピタル', salary: '320,000円', eligibility: '院卒見込/既卒', type: 'リース', note: 'ビジネスプロフェッショナル職。全国・海外転勤あり。'},
+                { name: 'SMFL', salary: '305,000円', eligibility: '院卒可', type: 'リース', note: 'トランスポーテーション部門あり。簿記3級必須。'},
+                { name: '双日', salary: '340,000円', eligibility: '院卒見込/既卒', type: '商社', note: '総合職採用。航空・社会インフラ本部など。'},
+                { name: 'FPG', salary: '290,000円', eligibility: '院卒見込/既卒', type: '専門金融', note: 'ストラクチャードファイナンス職で専門性を磨ける。'},
+                { name: 'SUBARU', salary: '288,000円', eligibility: '院卒可', type: 'メーカー', note: '航空宇宙カンパニーで企画・管理等の業務。'}
+            ];
+            
+            const companyGrid = document.getElementById('companyGrid');
+            companiesHiringData.forEach(company => {
+                const card = document.createElement('div');
+                card.className = 'company-card bg-warm-neutral p-5 rounded-lg border border-gray-200';
+                card.innerHTML = `
+                    <h4 class="text-lg font-bold text-primary">${company.name}</h4>
+                    <span class="text-xs font-semibold ${company.type === 'リース' ? 'bg-blue-100 text-blue-800' : (company.type === '商社' ? 'bg-green-100 text-green-800' : (company.type === 'メーカー' ? 'bg-yellow-100 text-yellow-800' : 'bg-purple-100 text-purple-800'))} px-2 py-0.5 rounded-full">${company.type}</span>
+                    <div class="mt-4 space-y-2">
+                        <p class="text-sm"><strong class="text-secondary">院卒初任給:</strong> ${company.salary}</p>
+                        <p class="text-sm"><strong class="text-secondary">応募資格:</strong> ${company.eligibility}</p>
+                        <p class="text-xs text-secondary mt-2">${company.note}</p>
+                    </div>
+                `;
+                companyGrid.appendChild(card);
+            });
+            
+            const risksData = [
+                {
+                    title: '航空会社の信用リスク',
+                    content: 'リース先の航空会社の経営が悪化し、リース料の支払いが滞るリスクです。対策として、リース先変更交渉や機体回収、再リースなどが挙げられますが、追加負担が生じる可能性があります。'
+                },
+                {
+                    title: '航空機の事故リスク',
+                    content: '機体そのものが損害を受けるリスクです。原則として航空機保険でカバーされますが、全損の場合はリース契約が強制終了となり、想定期間での投資が終了する可能性があります。'
+                },
+                {
+                    title: '燃料費変動リスク',
+                    content: 'ジェット燃料費の高騰が航空会社の収益を圧迫するリスクです。有効な対策として、デリバティブ（オプション取引やスワップ）を用いたヘッジ戦略があり、将来の支出を安定させることが可能です。'
+                }
+            ];
+
+            const riskAccordion = document.getElementById('riskAccordion');
+            risksData.forEach(risk => {
+                const item = document.createElement('div');
+                item.className = 'bg-card rounded-lg shadow-sm overflow-hidden';
+                item.innerHTML = `
+                    <button class="w-full text-left p-5 flex justify-between items-center font-bold text-primary hover:bg-gray-50 transition-colors">
+                        <span>${risk.title}</span>
+                        <span class="transform transition-transform text-secondary text-xl">▼</span>
+                    </button>
+                    <div class="px-5 pb-5 text-secondary text-sm hidden">
+                        <p>${risk.content}</p>
+                    </div>
+                `;
+                riskAccordion.appendChild(item);
+            });
+
+            riskAccordion.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+
+                const content = button.nextElementSibling;
+                const icon = button.querySelector('span:last-child');
+                
+                const isVisible = !content.classList.contains('hidden');
+                
+                if(isVisible) {
+                    content.classList.add('hidden');
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    content.classList.remove('hidden');
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            });
+
+            // Gemini API Integration for Interview Questions
+            async function generateInterviewQuestions(roleName, roleDescriptionText) {
+                interviewQuestionsContent.innerHTML = '<div class="loading-spinner"></div><p class="text-center text-secondary mt-4">質問を生成中...</p>';
+                interviewQuestionsModal.style.display = 'flex'; // Show modal
+
+                const prompt = `あなたは航空機投資業界の経験豊富な採用担当者です。以下の職種について、大学院生が面接で聞かれる可能性のある質問を5つ生成してください。質問は具体的にし、単なるスキルだけでなく、業界への理解や思考力を問うものを含めてください。\n\n職種名: ${roleName}\n職務内容: ${roleDescriptionText}\n\n質問リスト:`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "" // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        // Format the text into a list
+                        const questionsHtml = text.split('\n').filter(line => line.trim() !== '').map(line => `<li class="mb-2 text-secondary">${line.trim()}</li>`).join('');
+                        interviewQuestionsContent.innerHTML = `<ul class="list-disc list-inside text-left">${questionsHtml}</ul>`;
+                    } else {
+                        interviewQuestionsContent.innerHTML = '<p class="text-center text-red-500">質問の生成に失敗しました。再度お試しください。</p>';
+                    }
+                } catch (error) {
+                    console.error('Error generating interview questions:', error);
+                    interviewQuestionsContent.innerHTML = '<p class="text-center text-red-500">エラーが発生しました。インターネット接続を確認し、再度お試しください。</p>';
+                }
+            }
+
+            // Modal close functionality
+            closeButton.addEventListener('click', () => {
+                interviewQuestionsModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target === interviewQuestionsModal) {
+                    interviewQuestionsModal.style.display = 'none';
+                }
+            });
+
+            function showInterviewQuestionsModal(roleName, roleDescriptionText) {
+                generateInterviewQuestions(roleName, roleDescriptionText);
+            }
+        });
+    </script>
+</body>
+</html>
